@@ -58,7 +58,7 @@ def verify_age(birth_year: int, birth_month: int, birth_day: int) -> dict:
             "success": True,
             "age": age,
             "is_16_plus": age >= MINIMUM_AGE,
-            "message": "Access granted." if age >= MINIMUM_AGE else "Access denied. Must be 16 or older."
+            "message": "Welcome to TouchGrass!" if age >= MINIMUM_AGE else "You Shall Not PASS!. Must be 16 or older."
         }
 
     except Exception as e:
