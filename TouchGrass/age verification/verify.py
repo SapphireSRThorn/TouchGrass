@@ -10,6 +10,8 @@
 from datetime import datetime, timezone
 import ctypes
 import os
+import math
+import sys
 
 try:
     import tkinter as tk
@@ -142,6 +144,7 @@ def run_borderless_ui():
     accent_hover = "#4752c4"
 
     use_native_round_region = hasattr(ctypes, "windll")
+    use_linux_x11_shape = sys.platform.startswith("linux")
 
     if use_native_round_region:
         root.configure(bg=shell_bg)
@@ -152,6 +155,107 @@ def run_borderless_ui():
             root.wm_attributes("-transparentcolor", transparent_color)
         except tk.TclError:
             root.configure(bg=shell_bg)
+
+    class XRectangle(ctypes.Structure):
+        _fields_ = [
+            ("x", ctypes.c_short),
+            ("y", ctypes.c_short),
+            ("width", ctypes.c_ushort),
+            ("height", ctypes.c_ushort),
+        ]
+
+    x11_state = {
+        "available": False,
+        "display": None,
+        "xlib": None,
+        "xext": None,
+        "warned": False,
+    }
+
+    def init_linux_x11_shape():
+        if not use_linux_x11_shape:
+            return
+
+        try:
+            xlib = ctypes.CDLL("libX11.so.6")
+            xext = ctypes.CDLL("libXext.so.6")
+
+            xlib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+            xlib.XOpenDisplay.restype = ctypes.c_void_p
+            xlib.XFlush.argtypes = [ctypes.c_void_p]
+            xlib.XFlush.restype = ctypes.c_int
+
+            xext.XShapeCombineRectangles.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_ulong,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.POINTER(XRectangle),
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+            ]
+            xext.XShapeCombineRectangles.restype = None
+
+            display = xlib.XOpenDisplay(None)
+            if not display:
+                return
+
+            x11_state["available"] = True
+            x11_state["display"] = display
+            x11_state["xlib"] = xlib
+            x11_state["xext"] = xext
+        except Exception:
+            return
+
+    def apply_linux_x11_round_region(radius_px: int = 34):
+        if not x11_state["available"]:
+            if use_linux_x11_shape and not x11_state["warned"]:
+                x11_state["warned"] = True
+            return
+
+        root.update_idletasks()
+        w = root.winfo_width()
+        h = root.winfo_height()
+        if w <= 1 or h <= 1:
+            return
+
+        r = min(radius_px, max(2, w // 2), max(2, h // 2))
+        rect_count = max(1, h)
+        rects = (XRectangle * rect_count)()
+
+        for y in range(h):
+            if y < r:
+                dy = r - y - 1
+                inset = int(max(0, r - math.sqrt(max(0, (r * r) - (dy * dy)))))
+            elif y >= h - r:
+                dy = y - (h - r)
+                inset = int(max(0, r - math.sqrt(max(0, (r * r) - (dy * dy)))))
+            else:
+                inset = 0
+
+            width = max(1, w - (2 * inset))
+            rects[y].x = inset
+            rects[y].y = y
+            rects[y].width = width
+            rects[y].height = 1
+
+        window_id = ctypes.c_ulong(root.winfo_id())
+        x11_state["xext"].XShapeCombineRectangles(
+            x11_state["display"],
+            window_id,
+            0,
+            0,
+            0,
+            rects,
+            h,
+            0,
+            0,
+        )
+        x11_state["xlib"].XFlush(x11_state["display"])
+
+    init_linux_x11_shape()
 
     def draw_rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
         points = [
@@ -409,6 +513,7 @@ def run_borderless_ui():
         shell_canvas.itemconfigure(frame_window, width=event.width, height=event.height)
         resize_rounded_rect(shell_canvas, shell_shape, event.width, event.height, radius=34)
         apply_native_round_region()
+        apply_linux_x11_round_region()
 
     def update_card_layout(card_w: int):
         card_w = max(250, card_w)
@@ -432,6 +537,7 @@ def run_borderless_ui():
     card_canvas.bind("<Configure>", on_card_resize)
     root.after(0, refresh_card_height)
     root.after(0, apply_native_round_region)
+    root.after(0, apply_linux_x11_round_region)
 
     drag_state = {"x": 0, "y": 0}
 
