@@ -246,10 +246,10 @@ def run_borderless_ui():
     status_var = tk.StringVar(value="Fill all fields, then hit Verify.")
 
     def create_input_row(parent, label_text, var):
-        row = tk.Frame(parent, bg=card_bg)
+        row = tk.Frame(parent, bg=card_bg) # type: ignore
         row.pack(fill="x", pady=6)
 
-        tk.Label(
+        tk.Label( # type: ignore
             row,
             text=label_text,
             bg=card_bg,
@@ -259,10 +259,10 @@ def run_borderless_ui():
             anchor="w",
         ).pack(side="left", padx=(0, 10))
 
-        bubble = tk.Frame(row, bg=input_bg, bd=0)
+        bubble = tk.Frame(row, bg=input_bg, bd=0) # type: ignore
         bubble.pack(side="left", fill="x", expand=True)
 
-        entry = tk.Entry(
+        entry = tk.Entry( # type: ignore
             bubble,
             textvariable=var,
             bg=input_bg,
