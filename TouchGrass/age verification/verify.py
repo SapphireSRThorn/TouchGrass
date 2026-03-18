@@ -272,6 +272,7 @@ def run_borderless_ui():
     month_var = tk.StringVar()
     day_var = tk.StringVar()
     status_var = tk.StringVar(value="Fill all fields, then hit Verify.")
+    is_verified = {"value": False}
 
     def create_input_row(parent, label_text, var):
         row = tk.Frame(parent, bg=card_bg) # type: ignore
@@ -352,6 +353,7 @@ def run_borderless_ui():
             result = verify_age(year, month, day)
             result["matrix_user_id"] = matrix_user_context["matrix_user_id"]
             if result["is_16_plus"]:
+                is_verified["value"] = True
                 status_label.configure(fg="#43b581")
             else:
                 status_label.configure(fg="#faa61a")
@@ -363,6 +365,14 @@ def run_borderless_ui():
         except ValueError:
             status_label.configure(fg="#ed4245")
             status_var.set("Invalid input. Please enter numbers only.")
+
+    def attempt_close():
+        if is_verified["value"]:
+            root.destroy()
+            return
+
+        status_label.configure(fg="#ed4245")
+        status_var.set("You must complete verification before closing this window.")
 
     def hover_on(_event):
         button_canvas.itemconfig(button_shape, fill=accent_hover, outline=accent_hover)
@@ -442,7 +452,8 @@ def run_borderless_ui():
         entry_widget.bind("<Return>", lambda _event: on_verify())
 
     root.bind("<Return>", lambda _event: on_verify())
-    root.bind("<Escape>", lambda _event: root.destroy())
+    root.bind("<Escape>", lambda _event: attempt_close())
+    root.protocol("WM_DELETE_WINDOW", attempt_close)
     year_entry.focus_set()
 
     root.mainloop()
