@@ -9,6 +9,7 @@
 # =========================================
 from datetime import datetime, timezone
 import ctypes
+import os
 
 try:
     import tkinter as tk
@@ -126,7 +127,7 @@ def run_borderless_ui():
     root = tk.Tk()
     root.title("16+ Age Verification")
     window_w = 520
-    window_h = 470
+    window_h = 560
     root.geometry(f"{window_w}x{window_h}")
     root.resizable(False, False)
 
@@ -215,6 +216,33 @@ def run_borderless_ui():
 
     hero = tk.Frame(content, bg=shell_bg)
     hero.pack(fill="x", pady=(0, 10))
+
+    logo_label = tk.Label(hero, bg=shell_bg)
+    logo_label.pack(anchor="center", pady=(0, 8))
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, "touchgrass-logo.png")
+    logo_image = None
+
+    if os.path.exists(logo_path):
+        try:
+            loaded_logo = tk.PhotoImage(file=logo_path)
+            # Scale down larger images while preserving aspect ratio.
+            sample_factor = max(1, loaded_logo.width() // 300, loaded_logo.height() // 170)
+            logo_image = loaded_logo.subsample(sample_factor)
+            logo_label.configure(image=logo_image)
+        except tk.TclError:
+            logo_label.configure(
+                text="Logo file found but could not be loaded.",
+                fg="#ed4245",
+                font=("Segoe UI", 9),
+            )
+    else:
+        logo_label.configure(
+            text="Missing logo: place touchgrass-logo.png next to this script.",
+            fg=text_secondary,
+            font=("Segoe UI", 9),
+        )
 
     hero_title = tk.Label(
         hero,
