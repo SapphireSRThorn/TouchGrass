@@ -55,6 +55,8 @@ def verify_age(birth_year: int, birth_month: int, birth_day: int) -> dict:
             raise ValueError("Birth date cannot be in the future.")
 
         age = calculate_age(birth_year, birth_month, birth_day)
+        if age > 120:
+            raise ValueError("Birth year is too old. Maximum realistic age is 120.")
 
         return {
             "success": True,
@@ -132,6 +134,14 @@ def run_borderless_ui():
     window_h = 560
     root.geometry(f"{window_w}x{window_h}")
     root.resizable(False, False)
+
+    def center_window():
+        root.update_idletasks()
+        screen_w = root.winfo_screenwidth()
+        screen_h = root.winfo_screenheight()
+        pos_x = max(0, (screen_w - window_w) // 2)
+        pos_y = max(0, (screen_h - window_h) // 2)
+        root.geometry(f"{window_w}x{window_h}+{pos_x}+{pos_y}")
 
     root.overrideredirect(True)
 
@@ -377,6 +387,7 @@ def run_borderless_ui():
     day_var = tk.StringVar()
     status_var = tk.StringVar(value="Fill all fields, then hit Verify.")
     is_verified = {"value": False}
+    close_scheduled = {"value": False}
 
     def create_input_row(parent, label_text, var):
         row = tk.Frame(parent, bg=card_bg) # type: ignore
@@ -459,10 +470,13 @@ def run_borderless_ui():
             if result["is_16_plus"]:
                 is_verified["value"] = True
                 status_label.configure(fg="#43b581")
+                status_var.set(f"Age {result['age']}  |  Verified: True  |  {result['message']}")
+                if not close_scheduled["value"]:
+                    close_scheduled["value"] = True
+                    root.after(1500, root.destroy)
             else:
                 status_label.configure(fg="#faa61a")
-
-            status_var.set(f"Age {result['age']}  |  Verified: {result['is_16_plus']}  |  {result['message']}")
+                status_var.set(f"Age {result['age']}  |  Verified: False  |  {result['message']}")
             send_result_to_js_ts(result)
             save_result_to_matrix_database(result)
 
@@ -536,6 +550,7 @@ def run_borderless_ui():
     shell_canvas.bind("<Configure>", on_shell_resize)
     card_canvas.bind("<Configure>", on_card_resize)
     root.after(0, refresh_card_height)
+    root.after(0, center_window)
     root.after(0, apply_native_round_region)
     root.after(0, apply_linux_x11_round_region)
 
