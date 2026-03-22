@@ -9,8 +9,8 @@
 # =========================================
 from datetime import datetime, timezone
 import ctypes
-import os
 import math
+import os
 import sys
 
 try:
@@ -62,7 +62,7 @@ def verify_age(birth_year: int, birth_month: int, birth_day: int) -> dict:
             "success": True,
             "age": age,
             "is_16_plus": age >= MINIMUM_AGE,
-            "message": "Welcome to TouchGrass!" if age >= MINIMUM_AGE else "You Shall Not PASS!. Must be 16 or older."
+            "message": "Welcome to TouchGrass!" if age >= MINIMUM_AGE else "You Shall Not PASS!. Must be 16 or older.",
         }
 
     except Exception as e:
@@ -70,7 +70,7 @@ def verify_age(birth_year: int, birth_month: int, birth_day: int) -> dict:
             "success": False,
             "age": None,
             "is_16_plus": False,
-            "message": f"Error verifying age: {str(e)}"
+            "message": f"Error verifying age: {str(e)}",
         }
 
 
@@ -78,7 +78,6 @@ def send_result_to_js_ts(result: dict):
     """
     PLACEHOLDER:
     Replace this with your JavaScript/TypeScript integration.
-    
     """
     print("\n[PLACEHOLDER] Send this result to JS/TS:")
     print(result)
@@ -101,11 +100,6 @@ def save_result_to_matrix_database(result: dict):
     """
     PLACEHOLDER:
     Replace this with Matrix database or Matrix homeserver persistence.
-
-    Suggested future implementation points:
-    - insert the record into a Matrix-linked database table
-    - send an event to a Matrix room timeline
-    - call a backend API that persists verification state for a Matrix user
     """
     payload = build_matrix_verification_record(result)
     print("\n[PLACEHOLDER] Save this record to Matrix integration:")
@@ -145,19 +139,25 @@ def run_borderless_ui():
 
     root.overrideredirect(True)
 
-    shell_bg = "#2b2d31"
-    card_bg = "#232428"
-    input_bg = "#383a40"
-    text_primary = "#f2f3f5"
-    text_secondary = "#b5bac1"
-    accent = "#5865f2"
-    accent_hover = "#4752c4"
+    frame_color = "#00FF00"
+    gradient_start = "#001900"
+    gradient_end = "#006600"
+    text_outline = "#3E990B"
+    text_fill = "#000000"
+
+    shell_bg = gradient_start
+    card_bg = "#003300"
+    input_bg = "#005000"
+    text_primary = text_fill
+    text_secondary = text_outline
+    accent = frame_color
+    accent_hover = "#39FF39"
 
     use_native_round_region = hasattr(ctypes, "windll")
     use_linux_x11_shape = sys.platform.startswith("linux")
 
     if use_native_round_region:
-        root.configure(bg=shell_bg)
+        root.configure(bg=gradient_start)
     else:
         transparent_color = "#010203"
         root.configure(bg=transparent_color)
@@ -269,28 +269,68 @@ def run_borderless_ui():
 
     def draw_rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
         points = [
-            x1 + radius, y1,
-            x2 - radius, y1,
-            x2, y1,
-            x2, y1 + radius,
-            x2, y2 - radius,
-            x2, y2,
-            x2 - radius, y2,
-            x1 + radius, y2,
-            x1, y2,
-            x1, y2 - radius,
-            x1, y1 + radius,
-            x1, y1,
+            x1 + radius,
+            y1,
+            x2 - radius,
+            y1,
+            x2,
+            y1,
+            x2,
+            y1 + radius,
+            x2,
+            y2 - radius,
+            x2,
+            y2,
+            x2 - radius,
+            y2,
+            x1 + radius,
+            y2,
+            x1,
+            y2,
+            x1,
+            y2 - radius,
+            x1,
+            y1 + radius,
+            x1,
+            y1,
         ]
         return canvas.create_polygon(points, smooth=True, splinesteps=36, **kwargs)
 
+    def hex_to_rgb(hex_color: str):
+        raw = hex_color.lstrip("#")
+        return tuple(int(raw[i : i + 2], 16) for i in (0, 2, 4))
+
+    def rgb_to_hex(rgb):
+        return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+
+    def draw_horizontal_gradient(canvas, x1: int, y1: int, x2: int, y2: int, start_hex: str, end_hex: str, tag: str):
+        canvas.delete(tag)
+        width = max(1, x2 - x1)
+        start = hex_to_rgb(start_hex)
+        end = hex_to_rgb(end_hex)
+        for i in range(width):
+            t = i / max(1, width - 1)
+            color = (
+                int(start[0] + (end[0] - start[0]) * t),
+                int(start[1] + (end[1] - start[1]) * t),
+                int(start[2] + (end[2] - start[2]) * t),
+            )
+            x = x1 + i
+            canvas.create_line(x, y1, x, y2, fill=rgb_to_hex(color), tags=tag)
+
+    def draw_outlined_text(canvas, x: int, y: int, text: str, font, fill: str, outline: str):
+        for ox, oy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+            canvas.create_text(x + ox, y + oy, text=text, fill=outline, font=font, anchor="w")
+        canvas.create_text(x, y, text=text, fill=fill, font=font, anchor="w")
+
     shell_canvas = tk.Canvas(root, highlightthickness=0, bd=0, bg=root["bg"])
     shell_canvas.pack(fill="both", expand=True)
+    draw_horizontal_gradient(shell_canvas, 0, 0, window_w, window_h, gradient_start, gradient_end, "shell_gradient")
+    shell_canvas.tag_lower("shell_gradient")
 
     last_region_size = {"w": 0, "h": 0}
 
     def apply_native_round_region(radius_px: int = 68):
-        """Force rounded outer corners on Windows using a native window region."""
         if not use_native_round_region:
             return
 
@@ -318,7 +358,7 @@ def run_borderless_ui():
         window_h - 1,
         radius=34,
         fill=shell_bg,
-        outline="#202225",
+        outline=frame_color,
         width=1,
     )
 
@@ -333,18 +373,18 @@ def run_borderless_ui():
 
     logo_label = tk.Label(hero, bg=shell_bg)
     logo_label.pack(anchor="center", pady=(0, 8))
+    logo_refs = []
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     logo_path = os.path.join(script_dir, "touchgrass-logo.png")
-    logo_image = None
 
     if os.path.exists(logo_path):
         try:
             loaded_logo = tk.PhotoImage(file=logo_path)
-            # Scale down larger images while preserving aspect ratio.
             sample_factor = max(1, loaded_logo.width() // 300, loaded_logo.height() // 170)
             logo_image = loaded_logo.subsample(sample_factor)
             logo_label.configure(image=logo_image)
+            logo_refs.append(logo_image)
         except tk.TclError:
             logo_label.configure(
                 text="Logo file found but could not be loaded.",
@@ -358,14 +398,17 @@ def run_borderless_ui():
             font=("Segoe UI", 9),
         )
 
-    hero_title = tk.Label(
-        hero,
-        text="Touch Grass Age Verification",
-        bg=shell_bg,
-        fg=text_primary,
-        font=("Segoe UI Semibold", 18),
+    title_canvas = tk.Canvas(hero, height=34, bg=shell_bg, highlightthickness=0, bd=0)
+    title_canvas.pack(fill="x")
+    draw_outlined_text(
+        title_canvas,
+        0,
+        17,
+        "Touch Grass Age Verification",
+        ("Segoe UI Semibold", 18),
+        text_fill,
+        text_outline,
     )
-    hero_title.pack(anchor="w")
     hero_subtitle = tk.Label(
         hero,
         text="Enter your birth date to continue.",
@@ -390,10 +433,10 @@ def run_borderless_ui():
     close_scheduled = {"value": False}
 
     def create_input_row(parent, label_text, var):
-        row = tk.Frame(parent, bg=card_bg) # type: ignore
+        row = tk.Frame(parent, bg=card_bg)
         row.pack(fill="x", pady=6)
 
-        tk.Label( # type: ignore
+        tk.Label(
             row,
             text=label_text,
             bg=card_bg,
@@ -403,10 +446,10 @@ def run_borderless_ui():
             anchor="w",
         ).pack(side="left", padx=(0, 10))
 
-        bubble = tk.Frame(row, bg=input_bg, bd=0) # type: ignore
+        bubble = tk.Frame(row, bg=input_bg, bd=0)
         bubble.pack(side="left", fill="x", expand=True)
 
-        entry = tk.Entry( # type: ignore
+        entry = tk.Entry(
             bubble,
             textvariable=var,
             bg=input_bg,
@@ -423,8 +466,6 @@ def run_borderless_ui():
     month_entry = create_input_row(card, "Birth Month", month_var)
     day_entry = create_input_row(card, "Birth Day", day_var)
 
-    card.grid_columnconfigure(0, weight=1)
-
     status_label = tk.Label(
         card,
         textvariable=status_var,
@@ -439,24 +480,8 @@ def run_borderless_ui():
     button_canvas = tk.Canvas(card, width=180, height=44, highlightthickness=0, bd=0, bg=card_bg)
     button_canvas.pack(anchor="center", pady=(4, 0))
 
-    button_shape = draw_rounded_rect(
-        button_canvas,
-        1,
-        1,
-        179,
-        43,
-        radius=22,
-        fill=accent,
-        outline=accent,
-        width=1,
-    )
-    button_text = button_canvas.create_text(
-        90,
-        22,
-        text="Verify",
-        fill="#ffffff",
-        font=("Segoe UI", 10, "bold"),
-    )
+    button_shape = draw_rounded_rect(button_canvas, 1, 1, 179, 43, radius=22, fill=accent, outline=accent, width=1)
+    button_text = button_canvas.create_text(90, 22, text="Verify", fill="#ffffff", font=("Segoe UI", 10, "bold"))
 
     def on_verify():
         try:
@@ -479,7 +504,6 @@ def run_borderless_ui():
                 status_var.set(f"Age {result['age']}  |  Verified: False  |  {result['message']}")
             send_result_to_js_ts(result)
             save_result_to_matrix_database(result)
-
         except ValueError:
             status_label.configure(fg="#ed4245")
             status_var.set("Invalid input. Please enter numbers only.")
@@ -488,7 +512,6 @@ def run_borderless_ui():
         if is_verified["value"]:
             root.destroy()
             return
-
         status_label.configure(fg="#ed4245")
         status_var.set("You must complete verification before closing this window.")
 
@@ -508,22 +531,36 @@ def run_borderless_ui():
     def resize_rounded_rect(canvas, item_id, width, height, radius):
         radius = min(radius, max(2, width // 2), max(2, height // 2))
         points = [
-            1 + radius, 1,
-            width - 1 - radius, 1,
-            width - 1, 1,
-            width - 1, 1 + radius,
-            width - 1, height - 1 - radius,
-            width - 1, height - 1,
-            width - 1 - radius, height - 1,
-            1 + radius, height - 1,
-            1, height - 1,
-            1, height - 1 - radius,
-            1, 1 + radius,
-            1, 1,
+            1 + radius,
+            1,
+            width - 1 - radius,
+            1,
+            width - 1,
+            1,
+            width - 1,
+            1 + radius,
+            width - 1,
+            height - 1 - radius,
+            width - 1,
+            height - 1,
+            width - 1 - radius,
+            height - 1,
+            1 + radius,
+            height - 1,
+            1,
+            height - 1,
+            1,
+            height - 1 - radius,
+            1,
+            1 + radius,
+            1,
+            1,
         ]
         canvas.coords(item_id, *points)
 
     def on_shell_resize(event):
+        draw_horizontal_gradient(shell_canvas, 0, 0, event.width, event.height, gradient_start, gradient_end, "shell_gradient")
+        shell_canvas.tag_lower("shell_gradient")
         shell_canvas.itemconfigure(frame_window, width=event.width, height=event.height)
         resize_rounded_rect(shell_canvas, shell_shape, event.width, event.height, radius=34)
         apply_native_round_region()
@@ -543,13 +580,9 @@ def run_borderless_ui():
     def on_card_resize(event):
         update_card_layout(event.width)
 
-    def refresh_card_height():
-        card_canvas.update_idletasks()
-        update_card_layout(card_canvas.winfo_width())
-
     shell_canvas.bind("<Configure>", on_shell_resize)
     card_canvas.bind("<Configure>", on_card_resize)
-    root.after(0, refresh_card_height)
+
     root.after(0, center_window)
     root.after(0, apply_native_round_region)
     root.after(0, apply_linux_x11_round_region)
@@ -565,7 +598,7 @@ def run_borderless_ui():
         y = event.y_root - drag_state["y"]
         root.geometry(f"+{x}+{y}")
 
-    for drag_widget in (hero, hero_title, hero_subtitle):
+    for drag_widget in (hero, title_canvas, hero_subtitle):
         drag_widget.bind("<ButtonPress-1>", start_drag)
         drag_widget.bind("<B1-Motion>", do_drag)
 
@@ -595,9 +628,7 @@ def run_cli_fallback():
     matrix_user_context = load_matrix_user_context()
     result = verify_age(year, month, day)
     result["matrix_user_id"] = matrix_user_context["matrix_user_id"]
-    print(
-        f"Age {result['age']} | Verified: {result['is_16_plus']} | {result['message']}"
-    )
+    print(f"Age {result['age']} | Verified: {result['is_16_plus']} | {result['message']}")
     send_result_to_js_ts(result)
     save_result_to_matrix_database(result)
 
